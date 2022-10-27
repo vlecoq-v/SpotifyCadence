@@ -10,9 +10,8 @@ import (
 
 // create playlist matching target rythm and favorite artists
 // create an empty playlist and add recommandations from the seed
-func Create(client *spotify.Client) {
+func Create(client *spotify.Client, cadence float64) {
 	ctx := context.Background()
-	const targetCadence = 180
 	const genericPlaylistDescription = "A playlist created by SpotifyCadence"
 
 	user, err := client.CurrentUser(ctx)
@@ -21,9 +20,9 @@ func Create(client *spotify.Client) {
 	}
 
 	seeds := getSeeds(client)
-	tracks := getTracks(client, seeds, user, targetCadence)
+	tracks := getTracks(client, seeds, user, cadence)
 
-	emptyPlaylist, playlistCreationErr := client.CreatePlaylistForUser(ctx, user.ID, fmt.Sprintf("spotifyCadence: %d ppm", targetCadence), genericPlaylistDescription, true, false)
+	emptyPlaylist, playlistCreationErr := client.CreatePlaylistForUser(ctx, user.ID, fmt.Sprintf("spotifyCadence: %.0f cadence", cadence), genericPlaylistDescription, true, false)
 	if playlistCreationErr != nil {
 		log.Fatal("playlist creation error:", playlistCreationErr)
 	}
@@ -67,8 +66,6 @@ func getTracks(client *spotify.Client, seeds spotify.Seeds, user *spotify.Privat
 	}
 
 	fmt.Println("total size reco :", len(tracks))
-	// jreco, _ := json.MarshalIndent(reco.Tracks, "", "\t")
-	// fmt.Printf(string(jreco))
 
 	return tracks
 }
@@ -79,8 +76,6 @@ func getSeeds(client *spotify.Client) spotify.Seeds {
 	if topArtistsError != nil {
 		log.Fatal(topArtistsError)
 	}
-	// jTopArtists, _ := json.MarshalIndent(*topArtists, "", "\t")
-	// fmt.Println(string(jTopArtists))
 
 	var seeds spotify.Seeds
 	var artistNames []string
@@ -91,11 +86,4 @@ func getSeeds(client *spotify.Client) spotify.Seeds {
 	fmt.Println("size of seeds: ", len(seeds.Artists), "artist used", artistNames)
 
 	return seeds
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

@@ -9,7 +9,6 @@ In order to make it work you need to:
 TODO:
 - make some arguments available for:
   - number of artists,
-  - target ppm
   - target size for playlist
 
 - use different period seeds for the createPlaylist package and use up to 10 artists per period
@@ -18,6 +17,7 @@ TODO:
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -42,11 +42,14 @@ func main() {
 		log.Fatalf("error loading env files")
 	}
 
+	cadence := flag.Float64("cadence", 180, "target cadence or running pace, most run around a 150")
+	flag.Parse()
+
 	// start authentication prompt and wait for channel
 	getSpotifyClient()
 	client := <-ch
 
-	createPlaylist.Create(client)
+	createPlaylist.Create(client, *cadence)
 }
 
 // AUTHENTICATION
