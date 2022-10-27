@@ -71,18 +71,30 @@ func getTracks(client *spotify.Client, seeds spotify.Seeds, user *spotify.Privat
 }
 
 // get seeds from favorite artists
+// take 10 top artists from each existing spotify time ranges
 func getSeeds(client *spotify.Client) spotify.Seeds {
-	topArtists, topArtistsError := client.CurrentUsersTopArtists(context.Background())
-	if topArtistsError != nil {
-		log.Fatal(topArtistsError)
-	}
-
 	var seeds spotify.Seeds
 	var artistNames []string
-	for _, artist := range topArtists.Artists[:10] {
-		seeds.Artists = append(seeds.Artists, artist.ID)
-		artistNames = append(artistNames, artist.Name)
+	timeRanges := []spotify.Range{
+		spotify.ShortTermRange,
+		spotify.MediumTermRange,
+		spotify.LongTermRange,
 	}
+
+	for _, timeRange := range timeRanges {
+		topArtists, topArtistsError := client.CurrentUsersTopArtists(context.Background(), spotify.Timerange(timeRange))
+		if topArtistsError != nil {
+			log.Fatal(topArtistsError)
+		}
+
+		for _, artist := range topArtists.Artists[:10] {
+			seeds.Artists = append(seeds.Artists, artist.ID)
+			artistNames = append(artistNames, artist.Name)
+		}
+	}
+	seeds.Artists = removeDuplicateID(seeds.Artists)
+	artistNames = removeDuplicateString(artistNames)
+
 	fmt.Println("size of seeds: ", len(seeds.Artists), "artist used", artistNames)
 
 	return seeds
