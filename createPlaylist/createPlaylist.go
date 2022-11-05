@@ -12,17 +12,17 @@ import (
 // create an empty playlist and add recommandations from the seed
 func Create(client *spotify.Client, cadence float64) {
 	ctx := context.Background()
-	const genericPlaylistDescription = "A playlist created by SpotifyCadence"
 
 	user, err := client.CurrentUser(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	seeds := getSeeds(client)
+	seeds, artistNames := getSeeds(client)
 	tracks := getTracks(client, seeds, user, cadence)
+	playlistDescription := fmt.Sprintf("A playlist created by SpotifyCadence with artists : %v", artistNames)
 
-	emptyPlaylist, playlistCreationErr := client.CreatePlaylistForUser(ctx, user.ID, fmt.Sprintf("spotifyCadence: %.0f cadence", cadence), genericPlaylistDescription, true, false)
+	emptyPlaylist, playlistCreationErr := client.CreatePlaylistForUser(ctx, user.ID, fmt.Sprintf("spotifyCadence: %.0f cadence", cadence), playlistDescription, true, false)
 	if playlistCreationErr != nil {
 		log.Fatal("playlist creation error:", playlistCreationErr)
 	}
@@ -45,6 +45,8 @@ func Create(client *spotify.Client, cadence float64) {
 
 // get Tracks from seeds
 func getTracks(client *spotify.Client, seeds spotify.Seeds, user *spotify.PrivateUser, targetCadence float64) []spotify.SimpleTrack {
+	seedPoolSize := 1
+	tracksByPoolSize := 15
 	trackAttributes := spotify.NewTrackAttributes().
 		MinTempo(targetCadence/2 - 2).
 		MaxTempo(targetCadence/2 + 3).
@@ -53,11 +55,11 @@ func getTracks(client *spotify.Client, seeds spotify.Seeds, user *spotify.Privat
 	var tracks []spotify.SimpleTrack
 
 	ctx := context.Background()
-	for i := 0; i < len(seeds.Artists); i += 5 {
+	for i := 0; i < len(seeds.Artists); i += seedPoolSize {
 		seedSubSlice := spotify.Seeds{
-			Artists: seeds.Artists[i:min(i+5, cap(seeds.Artists))],
+			Artists: seeds.Artists[i:min(i+seedPoolSize, cap(seeds.Artists))],
 		}
-		recommendations, recoError := client.GetRecommendations(ctx, seedSubSlice, trackAttributes, spotify.Country(user.Country), spotify.Limit(50))
+		recommendations, recoError := client.GetRecommendations(ctx, seedSubSlice, trackAttributes, spotify.Country(user.Country), spotify.Limit(tracksByPoolSize))
 		if recoError != nil {
 			log.Fatal("reco error:", recoError)
 		}
@@ -72,7 +74,7 @@ func getTracks(client *spotify.Client, seeds spotify.Seeds, user *spotify.Privat
 
 // get seeds from favorite artists
 // take 10 top artists from each existing spotify time ranges
-func getSeeds(client *spotify.Client) spotify.Seeds {
+func getSeeds(client *spotify.Client) (spotify.Seeds, []string) {
 	var seeds spotify.Seeds
 	var artistNames []string
 	timeRanges := []spotify.Range{
@@ -97,5 +99,5 @@ func getSeeds(client *spotify.Client) spotify.Seeds {
 
 	fmt.Println("size of seeds: ", len(seeds.Artists), "artist used", artistNames)
 
-	return seeds
+	return seeds, artistNames
 }

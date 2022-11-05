@@ -11,7 +11,6 @@ TODO:
   - number of artists,
   - target size for playlist
 
-- use different period seeds for the createPlaylist package and use up to 10 artists per period
 - manual deploy on a small server
 */
 package main
